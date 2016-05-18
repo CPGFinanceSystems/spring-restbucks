@@ -16,10 +16,7 @@
 package org.springsource.restbucks.payment;
 
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
-
-import java.util.Optional;
-
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,77 +24,94 @@ import org.springsource.restbucks.order.Order;
 import org.springsource.restbucks.order.OrderRepository;
 import org.springsource.restbucks.payment.Payment.Receipt;
 
+import java.util.Optional;
+
 /**
  * Implementation of {@link PaymentService} delegating persistence operations to {@link PaymentRepository} and
  * {@link CreditCardRepository}.
- * 
+ *
  * @author Oliver Gierke
  * @author Stéphane Nicoll
  */
 @Service
 @Transactional
-@RequiredArgsConstructor
 class PaymentServiceImpl implements PaymentService {
 
-	private final @NonNull CreditCardRepository creditCardRepository;
-	private final @NonNull PaymentRepository paymentRepository;
-	private final @NonNull OrderRepository orderRepository;
-	private final @NonNull ApplicationEventPublisher publisher;
+    private final
+    @NonNull
+    CreditCardRepository creditCardRepository;
+    private final
+    @NonNull
+    PaymentRepository paymentRepository;
+    private final
+    @NonNull
+    OrderRepository orderRepository;
+    private final
+    @NonNull
+    ApplicationEventPublisher publisher;
 
-	/* 
-	 * (non-Javadoc)
-	 * @see org.springsource.restbucks.payment.PaymentService#pay(org.springsource.restbucks.order.Order, org.springsource.restbucks.payment.Payment)
-	 */
-	@Override
-	public CreditCardPayment pay(Order order, CreditCardNumber creditCardNumber) {
+    @Autowired
+    public PaymentServiceImpl(final CreditCardRepository creditCardRepository, final PaymentRepository paymentRepository, final OrderRepository orderRepository, final ApplicationEventPublisher publisher) {
+        this.creditCardRepository = creditCardRepository;
+        this.paymentRepository = paymentRepository;
+        this.orderRepository = orderRepository;
+        this.publisher = publisher;
+    }
 
-		if (order.isPaid()) {
-			throw new PaymentException(order, "Order already paid!");
-		}
+    /*
+     * (non-Javadoc)
+     * @see org.springsource.restbucks.payment.PaymentService#pay(org.springsource.restbucks.order.Order, org.springsource.restbucks.payment.Payment)
+     */
+    @Override
+    public CreditCardPayment pay(Order order, CreditCardNumber creditCardNumber) {
 
-		// Using Optional.orElseThrow(…) doesn't work due to https://bugs.openjdk.java.net/browse/JDK-8054569
-		Optional<CreditCard> creditCardResult = creditCardRepository.findByNumber(creditCardNumber);
+        if (order.isPaid()) {
+            throw new PaymentException(order, "Order already paid!");
+        }
 
-		if (!creditCardResult.isPresent()) {
-			throw new PaymentException(order,
-					String.format("No credit card found for number: %s", creditCardNumber.getNumber()));
-		}
+        // Using Optional.orElseThrow(…) doesn't work due to https://bugs.openjdk.java.net/browse/JDK-8054569
+        Optional<CreditCard> creditCardResult = creditCardRepository.findByNumber(creditCardNumber);
 
-		CreditCard creditCard = creditCardResult.get();
+        if (!creditCardResult.isPresent()) {
+            throw new PaymentException(order,
+                    String.format("No credit card found for number: %s", creditCardNumber.getNumber()));
+        }
 
-		if (!creditCard.isValid()) {
-			throw new PaymentException(order, String.format("Invalid credit card with number %s, expired %s!",
-					creditCardNumber.getNumber(), creditCard.getExpirationDate()));
-		}
+        CreditCard creditCard = creditCardResult.get();
 
-		order.markPaid();
-		CreditCardPayment payment = paymentRepository.save(new CreditCardPayment(creditCard, order));
+        if (!creditCard.isValid()) {
+            throw new PaymentException(order, String.format("Invalid credit card with number %s, expired %s!",
+                    creditCardNumber.getNumber(), creditCard.getExpirationDate()));
+        }
 
-		publisher.publishEvent(new OrderPaidEvent(order.getId()));
+        order.markPaid();
+        CreditCardPayment payment = paymentRepository.save(new CreditCardPayment(creditCard, order));
 
-		return payment;
-	}
+        publisher.publishEvent(new OrderPaidEvent(order.getId()));
 
-	/* 
-	 * (non-Javadoc)
-	 * @see org.springsource.restbucks.payment.PaymentService#getPaymentFor(org.springsource.restbucks.order.Order)
-	 */
-	@Override
-	@Transactional(readOnly = true)
-	public Optional<Payment> getPaymentFor(Order order) {
-		return paymentRepository.findByOrder(order);
-	}
+        return payment;
+    }
 
-	/* 
-	 * (non-Javadoc)
-	 * @see org.springsource.restbucks.payment.PaymentService#takeReceiptFor(org.springsource.restbucks.order.Order)
-	 */
-	@Override
-	public Optional<Receipt> takeReceiptFor(Order order) {
+    /*
+     * (non-Javadoc)
+     * @see org.springsource.restbucks.payment.PaymentService#getPaymentFor(org.springsource.restbucks.order.Order)
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Payment> getPaymentFor(Order order) {
+        return paymentRepository.findByOrder(order);
+    }
 
-		order.markTaken();
-		orderRepository.save(order);
+    /*
+     * (non-Javadoc)
+     * @see org.springsource.restbucks.payment.PaymentService#takeReceiptFor(org.springsource.restbucks.order.Order)
+     */
+    @Override
+    public Optional<Receipt> takeReceiptFor(Order order) {
 
-		return getPaymentFor(order).map(Payment::getReceipt);
-	}
+        order.markTaken();
+        orderRepository.save(order);
+
+        return getPaymentFor(order).map(Payment::getReceipt);
+    }
 }

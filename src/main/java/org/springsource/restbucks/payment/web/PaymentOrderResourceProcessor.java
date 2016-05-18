@@ -16,8 +16,7 @@
 package org.springsource.restbucks.payment.web;
 
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
-
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.ResourceProcessor;
 import org.springframework.stereotype.Component;
@@ -25,32 +24,38 @@ import org.springsource.restbucks.order.Order;
 
 /**
  * {@link ResourceProcessor} to enrich {@link Order} {@link Resource}s with links to the {@link PaymentController}.
- * 
+ *
  * @author Oliver Gierke
  */
 @Component
-@RequiredArgsConstructor
 class PaymentOrderResourceProcessor implements ResourceProcessor<Resource<Order>> {
 
-	private final @NonNull PaymentLinks paymentLinks;
+    private final
+    @NonNull
+    PaymentLinks paymentLinks;
 
-	/* 
-	 * (non-Javadoc)
-	 * @see org.springframework.hateoas.ResourceProcessor#process(org.springframework.hateoas.ResourceSupport)
-	 */
-	@Override
-	public Resource<Order> process(Resource<Order> resource) {
+    @Autowired
+    PaymentOrderResourceProcessor(final PaymentLinks paymentLinks) {
+        this.paymentLinks = paymentLinks;
+    }
 
-		Order order = resource.getContent();
+    /*
+     * (non-Javadoc)
+     * @see org.springframework.hateoas.ResourceProcessor#process(org.springframework.hateoas.ResourceSupport)
+     */
+    @Override
+    public Resource<Order> process(Resource<Order> resource) {
 
-		if (!order.isPaid()) {
-			resource.add(paymentLinks.getPaymentLink(order));
-		}
+        Order order = resource.getContent();
 
-		if (order.isReady()) {
-			resource.add(paymentLinks.getReceiptLink(order));
-		}
+        if (!order.isPaid()) {
+            resource.add(paymentLinks.getPaymentLink(order));
+        }
 
-		return resource;
-	}
+        if (order.isReady()) {
+            resource.add(paymentLinks.getReceiptLink(order));
+        }
+
+        return resource;
+    }
 }

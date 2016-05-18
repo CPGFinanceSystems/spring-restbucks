@@ -15,14 +15,9 @@
  */
 package org.springsource.restbucks.engine;
 
-import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.Collections;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -30,44 +25,54 @@ import org.springsource.restbucks.order.Order;
 import org.springsource.restbucks.order.OrderRepository;
 import org.springsource.restbucks.payment.OrderPaidEvent;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * Simple {@link OrderPaidEvent} listener marking the according {@link Order} as in process, sleeping for 10 seconds and
  * marking the order as processed right after that.
- * 
+ *
  * @author Oliver Gierke
  * @author Stéphane Nicoll
  */
 @Slf4j
 @Service
-@AllArgsConstructor
 class Engine {
 
-	private final @NonNull OrderRepository repository;
-	private final Set<Order> ordersInProgress = Collections.newSetFromMap(new ConcurrentHashMap<Order, Boolean>());
+    private final
+    @NonNull
+    OrderRepository repository;
+    private final Set<Order> ordersInProgress = Collections.newSetFromMap(new ConcurrentHashMap<Order, Boolean>());
 
-	@Async
-	@TransactionalEventListener
-	public void handleOrderPaidEvent(OrderPaidEvent event) {
+    @Autowired
+    public Engine(final OrderRepository repository) {
+        this.repository = repository;
+    }
 
-		Order order = repository.findOne(event.getOrderId());
-		order.markInPreparation();
-		order = repository.save(order);
+    @Async
+    @TransactionalEventListener
+    public void handleOrderPaidEvent(OrderPaidEvent event) {
 
-		ordersInProgress.add(order);
+        Order order = repository.findOne(event.getOrderId());
+        order.markInPreparation();
+        order = repository.save(order);
 
-		LOG.info("Starting to process order {}.", order);
+        ordersInProgress.add(order);
 
-		try {
-			Thread.sleep(5000);
-		} catch (InterruptedException e) {
-			throw new RuntimeException(e);
-		}
+        LOG.info("Starting to process order {}.", order);
 
-		order.markPrepared();
-		repository.save(order);
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 
-		ordersInProgress.remove(order);
+        order.markPrepared();
+        repository.save(order);
 
-		LOG.info("Finished processing order {}.", order);
-	}
+        ordersInProgress.remove(order);
+
+        LOG.info("Finished processing order {}.", order);
+    }
 }

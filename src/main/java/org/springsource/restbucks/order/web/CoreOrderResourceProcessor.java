@@ -16,8 +16,7 @@
 package org.springsource.restbucks.order.web;
 
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
-
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.EntityLinks;
 import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.ResourceProcessor;
@@ -27,32 +26,38 @@ import org.springsource.restbucks.order.Order;
 /**
  * {@link ResourceProcessor} implementation to add links to the {@link Order} representation that indicate that the
  * Order can be updated or cancelled as long as it has not been paid yet.
- * 
+ *
  * @author Oliver Gierke
  */
 @Component
-@RequiredArgsConstructor
 class CoreOrderResourceProcessor implements ResourceProcessor<Resource<Order>> {
 
-	public static final String CANCEL_REL = "cancel";
-	public static final String UPDATE_REL = "update";
+    public static final String CANCEL_REL = "cancel";
+    public static final String UPDATE_REL = "update";
 
-	private final @NonNull EntityLinks entityLinks;
+    private final
+    @NonNull
+    EntityLinks entityLinks;
 
-	/* 
-	 * (non-Javadoc)
-	 * @see org.springframework.hateoas.ResourceProcessor#process(org.springframework.hateoas.ResourceSupport)
-	 */
-	@Override
-	public Resource<Order> process(Resource<Order> resource) {
+    @Autowired
+    public CoreOrderResourceProcessor(final EntityLinks entityLinks) {
+        this.entityLinks = entityLinks;
+    }
 
-		Order order = resource.getContent();
+    /*
+     * (non-Javadoc)
+     * @see org.springframework.hateoas.ResourceProcessor#process(org.springframework.hateoas.ResourceSupport)
+     */
+    @Override
+    public Resource<Order> process(Resource<Order> resource) {
 
-		if (!order.isPaid()) {
-			resource.add(entityLinks.linkForSingleResource(order).withRel(CANCEL_REL));
-			resource.add(entityLinks.linkForSingleResource(order).withRel(UPDATE_REL));
-		}
+        Order order = resource.getContent();
 
-		return resource;
-	}
+        if (!order.isPaid()) {
+            resource.add(entityLinks.linkForSingleResource(order).withRel(CANCEL_REL));
+            resource.add(entityLinks.linkForSingleResource(order).withRel(UPDATE_REL));
+        }
+
+        return resource;
+    }
 }

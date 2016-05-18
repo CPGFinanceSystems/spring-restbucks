@@ -12,14 +12,13 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>1.4.0.M1</version>
+		<version>1.3.5.RELEASE</version>
 	</parent>
 
 	<properties>
 		<java.version>1.8</java.version>
 		<json-path.version>2.0.0</json-path.version>
-		<spring-hateoas.version>0.20.0.BUILD-SNAPSHOT</spring-hateoas.version>
-		<spring.version>4.3.0.RC1</spring.version>
+		<spring-hateoas.version>0.19.0.RELEASE</spring-hateoas.version>
 	</properties>
 
 	<dependencies>
@@ -31,11 +30,13 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
 			<artifactId>spring-boot-starter-data-rest</artifactId>
 		</dependency>
 
+		<!--
 		<dependency>
 			<groupId>org.springframework.data</groupId>
 			<artifactId>spring-data-rest-hal-browser</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+		-->
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
